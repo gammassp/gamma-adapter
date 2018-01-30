@@ -1,2 +1,0 @@
-# gamma-adapter
-# gamma-adapter
