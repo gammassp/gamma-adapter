@@ -15,7 +15,7 @@ Gamma bid adapter supports Banner, Video.
 # Test Parameters
 ```
 var adUnits = [{
-          code: 'aaa',
+          code: 'gamma-hb-ad-123456-1',
           sizes: [[300, 250]],
   
           // Replace this object to test a new Adapter!
