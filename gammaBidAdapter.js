@@ -43,12 +43,10 @@ export const spec = {
 
     const bids = [];
 
-    if (!serverResponse || JSON.stringify(serverResponse) == '[]') {
-      return bids;
-    }
-
-    const bid = newBid(serverResponse);
-    bids.push(bid);
+    if (serverResponse.id) {
+        const bid = newBid(serverResponse);
+        bids.push(bid);
+    }    
 
     return bids;
   }
