@@ -1,12 +1,14 @@
 import * as utils from 'src/utils';
 import { registerBidder } from 'src/adapters/bidderFactory';
-import find from 'core-js/library/fn/array/find';
 
+const ENDPOINT = 'https://hb.gammaplatform.com';
+const ENDPOINT_USERSYNC = 'https://cm-supply-web.gammaplatform.com';
 const BIDDER_CODE = 'gamma';
 
 export const spec = {
   code: BIDDER_CODE,
   aliases: ['gamma'],
+  supportedMediaTypes: ['banner', 'video'],
 
   /**
    * Determines whether or not the given bid request is valid.
@@ -15,7 +17,7 @@ export const spec = {
    * @return boolean True if this is a valid bid, and false otherwise.
    */
   isBidRequestValid: function(bid) {
-    return !!(bid.params.siteId || bid.params.zoneId || bid.params.gaxDomain);
+    return !!(bid.params.siteId || bid.params.zoneId);
   },
 
   /**
@@ -25,11 +27,15 @@ export const spec = {
    * @return ServerRequest Info describing the request to the server.
    */
   buildRequests: function(bidRequests) {
-    const gaxObjParams = find(bidRequests, hasParamInfo);
-    return {
-      method: 'GET',
-      url: '//' + gaxObjParams.params.gaxDomain + '/adx/request?wid=' + gaxObjParams.params.siteId + '&zid=' + gaxObjParams.params.zoneId + '&hb=pbjs&bidid=' + gaxObjParams.bidId + '&urf=' + utils.getTopWindowUrl()
-    };
+    const serverRequests = [];
+    for (var i = 0, len = bidRequests.length; i < len; i++) {
+      const gaxObjParams = bidRequests[i];
+      serverRequests.push({
+        method: 'GET',
+        url: ENDPOINT + '/adx/request?wid=' + gaxObjParams.params.siteId + '&zid=' + gaxObjParams.params.zoneId + '&hb=pbjs&bidid=' + gaxObjParams.bidId + '&urf=' + encodeURIComponent(utils.getTopWindowUrl())
+      });
+    }
+    return serverRequests;
   },
 
   /**
@@ -44,11 +50,20 @@ export const spec = {
     const bids = [];
 
     if (serverResponse.id) {
-        const bid = newBid(serverResponse);
-        bids.push(bid);
-    }    
+      const bid = newBid(serverResponse);
+      bids.push(bid);
+    }
 
     return bids;
+  },
+
+  getUserSyncs: function(syncOptions) {
+    if (syncOptions.iframeEnabled) {
+      return [{
+        type: 'iframe',
+        url: ENDPOINT_USERSYNC + '/adx/usersync'
+      }];
+    }
   }
 }
 
@@ -69,15 +84,18 @@ function newBid(serverBid) {
     mediaType: serverBid.type,
     netRevenue: true,
     requestId: serverBid.id,
-    ttl: serverBid.seatbid[0].bid[0].ttl || 300,
-    vastXml: serverBid.seatbid[0].bid[0].vastXml
+    ttl: serverBid.seatbid[0].bid[0].ttl || 300
   };
 
-  return bid;
-}
+  if (serverBid.type == 'video') {
+    Object.assign(bid, {
+      vastXml: serverBid.seatbid[0].bid[0].vastXml,
+      vastUrl: serverBid.seatbid[0].bid[0].vastUrl,
+      ttl: 3600
+    });
+  }
 
-function hasParamInfo(bid) {
-  return !!bid.params;
+  return bid;
 }
 
 registerBidder(spec);
